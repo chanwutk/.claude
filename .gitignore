@@ -20,13 +20,9 @@ remote-settings.json
 .last-update-result.json
 *.swp
 
-# Plugin repo clones — regenerated from plugins/installed_plugins.json and
-# plugins/known_marketplaces.json, no need to version the actual code
-plugins/cache/
-plugins/marketplaces/
-plugins/data/
-plugins/install-counts-cache.json
-plugins/.last_inuse_sweep
+# Don't push plugin state at all — installs/marketplaces are personal/
+# machine-specific and shouldn't live in this repo
+plugins/
 
 # Skill run output, not a skill definition
 skills/vdb-review-workspace/

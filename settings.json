@@ -43,5 +43,6 @@
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "effortLevel": "medium"
+  "effortLevel": "medium",
+  "autoUpdatesChannel": "latest"
 }
