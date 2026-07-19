@@ -14,12 +14,36 @@ ps1_host=$(hostname -s)
 ps1_cwd=$(echo "$input" | jq -r '.workspace.current_dir')
 # Abbreviate $HOME to ~
 ps1_cwd="${ps1_cwd/#$HOME/\~}"
+
+# Truncate every path component except the last (current) directory to its
+# first 2 characters. "~" is left untouched, and a leading "/" is preserved.
+abbrev_cwd() {
+  local path="$1" prefix="" parts part out=() i n
+
+  if [ "${path:0:1}" = "/" ]; then
+    prefix="/"
+    path="${path:1}"
+  fi
+
+  IFS='/' read -r -a parts <<< "$path"
+  n=${#parts[@]}
+  for (( i = 0; i < n; i++ )); do
+    part="${parts[$i]}"
+    if [ "$i" -lt $(( n - 1 )) ] && [ "$part" != "~" ]; then
+      out+=("${part:0:2}")
+    else
+      out+=("$part")
+    fi
+  done
+
+  local joined
+  joined=$(IFS=/; echo "${out[*]}")
+  printf '%s%s' "$prefix" "$joined"
+}
+ps1_cwd=$(abbrev_cwd "$ps1_cwd")
+
 # ps1_prompt="${ps1_user}@${ps1_host}:${ps1_cwd}"
 ps1_prompt="${ps1_cwd}"
-
-# Git info (skip optional locks to avoid contention)
-branch=$(git -C "$(echo "$input" | jq -r '.workspace.current_dir')" \
-  -c gc.auto=0 branch --show-current 2>/dev/null)
 
 # Terminal width (Claude Code exports COLUMNS to the statusline command)
 cols=${COLUMNS:-$(tput cols 2>/dev/null || echo 100)}
@@ -32,22 +56,21 @@ C_DIM=$'\033[2m'
 C_CWD=$'\033[1;36m'      # bold cyan
 C_MODEL=$'\033[1;32m'    # bold green
 case "$label" in
-  low)       C_EFFORT=$'\033[1;38;5;46m'  ;;  # bold green
-  medium)    C_EFFORT=$'\033[1;38;5;226m' ;;  # bold yellow
-  high)      C_EFFORT=$'\033[1;38;5;208m' ;;  # bold orange
-  xhigh)     C_EFFORT=$'\033[1;38;5;196m' ;;  # bold red
-  max)       C_EFFORT=$'\033[1;38;5;93m'  ;;  # bold purple
-  ultracode) C_EFFORT=$'\033[1;38;5;201m';;  # bold bright magenta (beyond max)
-  auto)      C_EFFORT=$'\033[1;36m'       ;;  # bold cyan
-  *)         C_EFFORT=$'\033[1;30m'       ;;  # bold gray (unknown)
+  low)       C_EFFORT=$'\033[1;38;5;46m'  ; label_disp=L    ;;  # bold green
+  medium)    C_EFFORT=$'\033[1;38;5;226m' ; label_disp=M    ;;  # bold yellow
+  high)      C_EFFORT=$'\033[1;38;5;208m' ; label_disp=H    ;;  # bold orange
+  xhigh)     C_EFFORT=$'\033[1;38;5;196m' ; label_disp=X    ;;  # bold red
+  max)       C_EFFORT=$'\033[1;38;5;93m'  ; label_disp=MAX  ;;  # bold purple
+  ultracode) C_EFFORT=$'\033[1;38;5;201m'; label_disp=$label;;  # bold bright magenta (beyond max)
+  auto)      C_EFFORT=$'\033[1;36m'       ; label_disp=$label;;  # bold cyan
+  *)         C_EFFORT=$'\033[1;30m'       ; label_disp=$label;;  # bold gray (unknown)
 esac
-C_BRANCH=$'\033[1;35m'   # bold magenta
-C_CLEAN=$'\033[0;32m'    # green
-C_DIRTY=$'\033[1;31m'    # bold red
 C_TARGET=$'\033[1;34m'   # bold blue
 C_BARBACK=$'\033[38;5;238m'  # rich's bar.back grey
 C_MARKER=$'\033[1;97m'       # bright white time marker
-SEP="${C_DIM} | ${C_RESET}"
+C_CORNER=$'\033[1m'      # bold
+SEP="${C_CORNER} ┏ ${C_RESET}"
+SEP2="${C_CORNER} ┗ ${C_RESET}"
 
 # Color a remaining percentage (0=none left, 100=full) using d3's
 # interpolateRdYlGn diverging scale on a sqrt input scale — i.e.
@@ -181,26 +204,13 @@ if [ -n "$five_pct" ] && [ -n "$five_reset" ] && [ -n "$week_reset" ]; then
     'BEGIN{t = (sl - 1 + (100 - fp) / 100) * tp * 100; if (t > 100) t = 100; printf "%d", t + 0.5}')
 fi
 
-# --- line 1: cwd | git | wk <bar: quota left, | = time left> left% ---
+# --- line 1: cwd | wk <bar: quota left, | = time left> left% ---
 MIN_BAR=10
 
-if [ -n "$branch" ]; then
-  changed=$(git -C "$(echo "$input" | jq -r '.workspace.current_dir')" \
-    -c gc.auto=0 status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$changed" -eq 0 ]; then
-    git_plain="${branch} clean"
-    git_info="${C_BRANCH}${branch}${C_RESET} ${C_CLEAN}clean${C_RESET}"
-  else
-    git_plain="${branch} +${changed}"
-    git_info="${C_BRANCH}${branch}${C_RESET} ${C_DIRTY}+${changed}${C_RESET}"
-  fi
-fi
-
-# Reserve room for the git segment (if any) + the wk section's fixed chrome
-# (" | wk " = 6) + a minimum bar, then truncate a too-long cwd path from the
-# left so the whole line can never exceed the terminal.
+# Reserve room for the wk section's fixed chrome (" | wk " = 6) + a minimum
+# bar, then truncate a too-long cwd path from the left so the whole line can
+# never exceed the terminal.
 reserve=6
-[ -n "$branch" ] && reserve=$(( reserve + 3 + ${#git_plain} ))   # " | " + git_plain
 avail_for_cwd=$(( usable - reserve - MIN_BAR ))
 if [ "$avail_for_cwd" -lt 4 ]; then avail_for_cwd=4; fi
 if [ "${#ps1_prompt}" -gt "$avail_for_cwd" ]; then
@@ -211,7 +221,19 @@ fi
 
 plain1="${ps1_prompt}"
 line1="${C_CWD}${ps1_prompt}${C_RESET}"
-[ -n "$branch" ] && plain1+=" | ${git_plain}" && line1+="${SEP}${git_info}"
+plain2_head="${model} ${label_disp}"
+line2="${C_MODEL}${model}${C_RESET} ${C_EFFORT}${label_disp}${C_RESET}"
+
+# Align the wk and 5h bars: both start at the same column, i.e. the longer
+# of the two head texts plus their fixed chrome (" | wk " / " | 5h ", 6
+# chars each), whichever line is shorter gets padded to match.
+bar_start=$(( ${#plain1} + 6 ))    # " | wk " (6)
+prefix2=$(( ${#plain2_head} + 6 )) # " | " (3) + "5h " (3)
+if [ "$bar_start" -ge "$prefix2" ]; then
+  common_start=$bar_start
+else
+  common_start=$prefix2
+fi
 
 if [ -n "$week_pct" ]; then
   week_left=$(( 100 - week_pct ))
@@ -223,20 +245,24 @@ if [ -n "$week_pct" ]; then
     [ "$remain" -gt "$week_len" ] && remain=$week_len
     week_time_left=$(( remain * 100 / week_len ))
   fi
-  bar_start=$(( ${#plain1} + 6 ))   # " | wk " (6)
+  pad1=""
+  needed1=$(( common_start - bar_start ))
+  if [ "$needed1" -gt 0 ]; then
+    # Pad with U+2800 (braille blank): renders as empty space but is not
+    # whitespace, so the renderer's leading-space trimming leaves it intact.
+    for (( i = 0; i < needed1; i++ )); do pad1+=$'\342\240\200'; done
+  fi
   # Stretch to only 95% of the remaining space, as a safety margin against
   # any residual terminal/font width discrepancy.
-  bar_w=$(( (usable - bar_start) * 95 / 100 ))
+  bar_w=$(( (usable - common_start - 2) * 95 / 100 ))   # -2 reserves " ┐" trailer
   if [ "$bar_w" -ge 1 ]; then
     wk_color=$(left_color "$week_left")
     target_marker=${target:--1}
-    line1+="${SEP}${C_DIM}wk${C_RESET} $(rich_bar "$bar_w" "$week_left" "$wk_color" "$week_time_left" "$C_MARKER" "|" "$target_marker" "$C_TARGET" "|")"
+    line1+="${pad1}${SEP}${C_DIM}wk${C_RESET} $(rich_bar "$bar_w" "$week_left" "$wk_color" "$week_time_left" "$C_MARKER" "|" "$target_marker" "$C_TARGET" "|") ${C_CORNER}┓${C_RESET}"
   fi
 fi
 
 # --- line 2: model effort | 5h <bar: quota left, | = time left> left% ---
-plain2_head="${model} ${label}"
-line2="${C_MODEL}${model}${C_RESET} ${C_EFFORT}${label}${C_RESET}"
 if [ -n "$five_pct" ]; then
   five_left=$(( 100 - five_pct ))
   five_time_left=-1
@@ -248,25 +274,17 @@ if [ -n "$five_pct" ]; then
   fi
   suffix2=""
 
-  # Align the 5h bar's start with the wk bar's start on line 1
-  prefix2=$(( ${#plain2_head} + 6 ))   # " | " (3) + "5h " (3)
-  if [ -n "${bar_start:-}" ] && [ "$bar_start" -ge "$prefix2" ] \
-     && [ $(( usable - bar_start - ${#suffix2} )) -ge 10 ]; then
-    prefix2=$bar_start
-  fi
   # Stretch to only 95% of the remaining space, as a safety margin against
   # any residual terminal/font width discrepancy.
-  bar_w2=$(( (usable - prefix2 - ${#suffix2}) * 95 / 100 ))
+  bar_w2=$(( (usable - common_start - ${#suffix2} - 2) * 95 / 100 ))   # -2 reserves " ┘" trailer
   if [ "$bar_w2" -ge 1 ]; then
-    pad=""
-    needed=$(( prefix2 - ${#plain2_head} - 6 ))
-    if [ "$needed" -gt 0 ]; then
-      # Pad with U+2800 (braille blank): renders as empty space but is not
-      # whitespace, so the renderer's leading-space trimming leaves it intact.
-      for (( i = 0; i < needed; i++ )); do pad+=$'\342\240\200'; done
+    pad2=""
+    needed2=$(( common_start - prefix2 ))
+    if [ "$needed2" -gt 0 ]; then
+      for (( i = 0; i < needed2; i++ )); do pad2+=$'\342\240\200'; done
     fi
     five_color=$(left_color "$five_left")
-    line2+="${pad}${SEP}${C_DIM}5h${C_RESET} $(rich_bar "$bar_w2" "$five_left" "$five_color" "$five_time_left")"
+    line2+="${pad2}${SEP2}${C_DIM}5h${C_RESET} $(rich_bar "$bar_w2" "$five_left" "$five_color" "$five_time_left") ${C_CORNER}┛${C_RESET}"
   fi
 fi
 
