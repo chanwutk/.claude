@@ -1,6 +1,47 @@
 {
-  "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true
+  "env": {},
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile:*)",
+      "Bash(python setup.py:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(git config:*)",
+      "Bash(git submodule:*)",
+      "Bash(xargs -I {} git config --file .gitmodules --get {})",
+      "Bash(git ls-tree:*)"
+    ],
+    "defaultMode": "dontAsk"
   },
-  "autoUpdatesChannel": "latest"
+  "model": "sonnet",
+  "statusLine": {
+    "type": "command",
+    "command": "bash /Users/chanwutk/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "revealjs@revealjs-skill": true,
+    "warp@claude-code-warp": true
+  },
+  "extraKnownMarketplaces": {
+    "revealjs-skill": {
+      "source": {
+        "source": "github",
+        "repo": "ryanbbrown/revealjs-skill"
+      }
+    },
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "editorMode": "normal",
+  "autoCompactEnabled": true,
+  "remoteControlAtStartup": false,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true,
+  "effortLevel": "medium"
 }

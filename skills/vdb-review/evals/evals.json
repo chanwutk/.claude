@@ -1,0 +1,49 @@
+{
+  "skill_name": "vdb-review",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Review the paper at build/main.pdf in constructive mode. This is a paper about efficient video object tracking using tile-level sampling and polyomino-based spatial pruning.",
+      "expected_output": "A structured VLDB review in constructive mode with summary, strengths, weaknesses, detailed comments, questions, and assessment summary table.",
+      "files": ["build/main.pdf"],
+      "expectations": [
+        "Review follows VLDB structure with all required sections (Summary, Strengths, Weaknesses, Detailed Comments, Questions, Assessment Summary)",
+        "Review correctly identifies the paper's core contribution (tile-level spatial sampling with polyominoes for video ETL/object tracking)",
+        "Review references specific related work from the video DBMS literature (e.g., OTIF, LEAP, NoScope, EVA)",
+        "Detailed comments reference specific sections, figures, or equations from the paper",
+        "Weaknesses include actionable suggestions for improvement (not just complaints)",
+        "Review identifies the stationary-camera assumption as a limitation",
+        "Review includes an overall rating from the VLDB scale"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Review the paper at build/main.pdf in adversarial mode. This is a paper about efficient video object tracking using tile-level sampling and polyomino-based spatial pruning.",
+      "expected_output": "A structured VLDB review in adversarial mode with harder scrutiny on novelty, evaluation gaps, and generality claims.",
+      "files": ["build/main.pdf"],
+      "expectations": [
+        "Review follows VLDB structure with all required sections",
+        "Review scrutinizes novelty claims — questions what is genuinely new vs. engineering combination of known techniques",
+        "Review pushes on evaluation gaps (e.g., limited baselines, dataset diversity, parameter sensitivity)",
+        "Review questions generality of the approach beyond stationary cameras",
+        "Review compares explicitly against the strongest related work (OTIF, LEAP) and questions whether comparisons are fair",
+        "Tone is tough but fair — acknowledges real contributions even while being critical",
+        "Review rating is lower or equal to the constructive mode rating"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review the paper at apperception_optimization.pdf in constructive mode. This is a paper about a geospatial video analytics system with spatial-aware optimizations.",
+      "expected_output": "A structured VLDB review in constructive mode. We can compare this against real reviews the paper received.",
+      "files": ["apperception_optimization.pdf"],
+      "expectations": [
+        "Review follows VLDB structure with all required sections",
+        "Review correctly identifies the build-filter-observe paradigm and S-Flow DSL as core contributions",
+        "Review identifies issues similar to those raised by the real VLDB reviewers (e.g., novelty concerns, data model formalization, evaluation comprehensiveness)",
+        "Review references relevant related work (e.g., OTIF, EVA, VisualWorldDB, Apperception demo, Visual Road)",
+        "Detailed comments are specific enough that authors would know exactly what to fix",
+        "Review includes an overall rating consistent with the mixed reception the paper actually received (Weak Reject to Weak Accept range)"
+      ]
+    }
+  ]
+}

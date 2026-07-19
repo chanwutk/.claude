@@ -1,0 +1,35 @@
+# Conversation data / sensitive
+projects/
+sessions/
+history.jsonl
+shell-snapshots/
+
+# Ephemeral / cache / generated state
+backups/
+cache/
+debug/
+file-history/
+telemetry/
+tasks/
+plans/
+stats-cache.json
+mcp-needs-auth-cache.json
+policy-limits.json
+remote-settings.json
+.last-cleanup
+.last-update-result.json
+*.swp
+
+# Plugin repo clones — regenerated from plugins/installed_plugins.json and
+# plugins/known_marketplaces.json, no need to version the actual code
+plugins/cache/
+plugins/marketplaces/
+plugins/data/
+plugins/install-counts-cache.json
+plugins/.last_inuse_sweep
+
+# Skill run output, not a skill definition
+skills/vdb-review-workspace/
+
+# OS cruft
+.DS_Store
